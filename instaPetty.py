@@ -41,6 +41,8 @@ options.add_argument('--ignore-certificate-errors')
 
 driver = webdriver.Chrome(ChromeDriverManager().install())
 
+print()
+print()
 
 driver.get('https://www.instagram.com/accounts/login/')
 sleep(2)
@@ -60,18 +62,20 @@ sleep(2)
 def getPeople(page):
   driver.get('https://www.instagram.com/%s' % account)
   sleep(2) 
-
   driver.find_element_by_xpath('//a[contains(@href, "%s")]' % page).click()
-  scr2 = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+
+  if (page == "followers"): 
+    scr2 = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+  else: 
+    scr2 = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/header/section/ul/li[3]/a')
+
   sleep(5)
   count_text = scr2.text
-
+  print(scr2)
+  print(scr2.text)
   count_text = count_text.split(" ")[0]
-
   count_text = count_text.replace(',', '') # Removes comma if there is one 
-
   count = int(count_text)
-
   dirname = os.path.dirname(os.path.abspath(__file__))
   csvfilename = os.path.join(dirname, account + "-" + page + ".txt")
   file_exists = os.path.isfile(csvfilename) # dunno what this does
@@ -82,22 +86,18 @@ def getPeople(page):
   for i in range(1, count + 1):   # -3 because there are some weird extra bits added 
     try:
       scr1 = driver.find_element_by_xpath('/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
-
       driver.execute_script("arguments[0].scrollIntoView();", scr1)
       text = scr1.text.split()[0] # Gets the username from the text 
-
       f.write(text + "\n")
+      progressBar(i, count)
       people.append(text)
-
-      sleep(0.2)  # the speed it scrolls through accounts. higher = more stable, lower = faster
-      
+      sleep(0.5)  # the speed it scrolls through accounts. higher = more stable, lower = faster
 
     except:
-      print("Error / end of list")
-      break
-      
+      break # Either the list is done, or there has been an error 
 
   f.close()
+  count = 0 
 
 
   try:
@@ -106,16 +106,22 @@ def getPeople(page):
     print("error")
     return 1
 
+def progressBar(current, total, barLength = 20):
+    percent = float(current) * 100 / total
+    arrow   = '=' * int(percent/100 * barLength - 1) + '>'
+    spaces  = ' ' * (barLength - len(arrow))
+
+    print('Progress: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
+
 
 followers = getPeople("followers")
+print("Followers: ", len(followers))
 
 following = getPeople("following")
-
-  
-driver.quit() # Exits the the web driver
-
-print("Followers: ", len(followers))
 print("Following: ", len(following))
+
+
+driver.quit() # Exits the the web driver
 
 
 csvfilename = os.path.join(account + " doesn't follow back.txt")
